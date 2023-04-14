@@ -86,7 +86,7 @@ class Huey(object):
     def __init__(self, name='huey', results=True, store_none=False, utc=True,
                  immediate=False, serializer=None, compression=False,
                  use_zlib=False, immediate_use_memory=True, always_eager=None,
-                 storage_class=None, **storage_kwargs):
+                 storage_class=None, duration_warn=None, **storage_kwargs):
         if always_eager is not None:
             warnings.warn('"always_eager" parameter is deprecated, use '
                           '"immediate" instead', DeprecationWarning)
@@ -114,6 +114,7 @@ class Huey(object):
         if storage_class is not None:
             self.storage_class = storage_class
         self.storage = self.create_storage()
+        self.duration_warn = duration_warn
 
         self._locks = set()
         self._pre_execute = OrderedDict()
@@ -409,6 +410,9 @@ class Huey(object):
             self._emit(S.SIGNAL_ERROR, task, exc)
         else:
             logger.info('%s executed in %0.3fs', task, duration)
+
+        if self.duration_warn and duration > self.duration_warn:
+            logger.error("%s took longer than %0.3fs to execute", task, duration)
 
         # Clear the flag if this instance of the task was revoked after it
         # began executing by destructively reading it's revoke key.
